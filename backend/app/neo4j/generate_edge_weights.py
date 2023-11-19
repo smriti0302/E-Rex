@@ -1,0 +1,2 @@
+def edgeWeightGen():
+    return "hello"

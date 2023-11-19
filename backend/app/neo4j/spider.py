@@ -2,12 +2,14 @@
 
 from neo4j import GraphDatabase
 from .helper import studentClubSim, studentEventSim, eventClubSim
-from app.utils.secretHandler import getSecret
+import generate_edge_weights
+# from app.utils.secretHandler import getSecret
 
 uri = "bolt://localhost:7687"
-username = getSecret(['testdb','username'])
-password = getSecret(['testdb','password'])
-
+# username = getSecret(['testdb','username'])
+# password = getSecret(['testdb','password'])
+username = "neo4j"
+password = "erex,12345"
 driver=GraphDatabase.driver(uri,auth=(username,password))
 session=driver.session()
 
@@ -76,74 +78,24 @@ class Spider():
         session.run(query)
     
     def weave(self,studentId:str):
-<<<<<<< HEAD
-        nodeQueue={"Student":[],"Club":[],"Event":[]}
-        query="MATCH (s:Student {StudentId: $studentId}) RETURN s"
-        result=session.run(query,studentId=studentId)
-        currNode=result.single()["s"]
-        '''
-        In order to avoid revisiting paths, we need to be aware of visited relationships.
-        Hence, mark edges visited.
-        '''
-        query="MATCH ()-[r]-() WHERE type(r) <> 'SILK_ROAD' SET r.visited=0 "
-        session.run(query)
-        query="MATCH (s:Student {StudentId: $studentId})-[r]-(neighbour) WHERE type(r) <> 'SILK_ROAD' SET r.visited=1 RETURN DISTINCT(neighbour) as neighbour"
-        result=session.run(query,studentId=studentId)
-        temp=[]        
-        #whether neighbours exist or not, take the entire graph, predict edge weights
-
-        for record in result:
-            temp.append(record)
-            label,=record["neighbour"].labels
-            nodeQueue[label].append(record["neighbour"]) 
-        if(len(temp) == 0):
-            print("No neighbours!")
-            return 0
-        for club in nodeQueue["Club"]:
-            score=studentClubSim(session,currNode["StudentId"],club["ClubId"],True)
-            #Weight the score
-            score*=self.rel_weights["SC"]
-            #Store the sim. score
-            query="""
-            MATCH (s:Student {StudentId: $studentId}), (c:Club {ClubId: $clubId})
-            MERGE (s)-[r:SILK_ROAD]-(c)
-            SET r.weight=$score
-            """
-            session.run(query,studentId=currNode["StudentId"],clubId=club["ClubId"],score=score)
-        for event in nodeQueue["Event"]:
-            score=studentEventSim(session,currNode["StudentId"],event["EventId"],True)
-            #Weight the score
-            score*=self.rel_weights["SE"]
-            #Store the sim. score
-            query="""
-            MATCH (s:Student {StudentId: $studentId}), (e:Event {EventId: $eventId})
-            MERGE (s)-[r:SILK_ROAD]-(e)
-            SET r.weight=$score
-            """
-            session.run(query,studentId=currNode["StudentId"],eventId=event["EventId"],score=score)
-            '''
-            Next steps:
-            1) Make weave recursive wrt student nodes. Complete all other SILK_ROAD gens.(like event, club) in current weave only.
-            '''
-        return "hello"
-=======
         nodeQueue=[]
         def weaveNeighbourhood(node):
             nodeType,=node.labels
             neighbourQueue={"Student":[],"Club":[],"Event":[]}
             query=f"""
-            MATCH (s:{type} {{{type+'Id'}: $id}})-[r]-(neighbour)
+            MATCH (s:{nodeType} {{{nodeType+'Id'}: $id}})-[r]-(neighbour)
             WHERE type(r) <> 'SILK_ROAD'
             SET r.visited=1
             RETURN DISTINCT(neighbour) as neighbour
             """
-            result=session.run(query,id=node[type+"Id"])
+            result=session.run(query,id=node[nodeType+"Id"])
             for record in result:
                 nodeQueue.append(record)
                 label,=record["neighbour"].labels
                 neighbourQueue[label].append(record["neighbour"])
-
-            for club in nodeQueue["Club"]:
+            #generate edge weights on entire graph
+            generate_edge_weights.edgeWeightGen()
+            for club in neighbourQueue["Club"]:
                 nodeTypes=frozenset({nodeType[0],'C'})
                 clubSimFunc=self.helper(nodeTypes)
                 score=clubSimFunc(session,node["StudentId"],club["ClubId"],True)
@@ -156,7 +108,7 @@ class Spider():
                 SET r.weight=$score
                 """
                 session.run(query,studentId=node["StudentId"],clubId=club["ClubId"],score=score)
-            for event in nodeQueue["Event"]:
+            for event in neighbourQueue["Event"]:
                 nodeTypes=frozenset({nodeType[0],'E'})
                 eventSimFunc=self.helper(nodeType,'Event')
                 score=eventSimFunc(session,node["StudentId"],event["EventId"],True)
@@ -169,7 +121,7 @@ class Spider():
                 SET r.weight=$score
                 """
                 session.run(query,studentId=node["StudentId"],eventId=event["EventId"],score=score)
-            for student in nodeQueue["Student"]:
+            for student in neighbourQueue["Student"]:
                 nodeTypes=frozenset({nodeType[0],'S'})
                 studentSimFunc=self.helper(nodeTypes)
                 score=studentSimFunc(session,node["StudentId"],event["EventId"],True)
@@ -202,7 +154,6 @@ class Spider():
                 weaveNeighbourhood(nodeQueue.pop(0))
             except IndexError:
                 break
->>>>>>> 9562e4e4419e35220000a8419601488eda5f8a2d
     
     def crawl(self,studentId:str):
         #TODO Need to account for supply of session either as an arg or as an attribute of the Spider()

@@ -1,14 +1,16 @@
 from neo4j import GraphDatabase,exceptions
-from app.utils.secretHandler import getSecret
+# from app.utils.secretHandler import getSecret
 
 class Database:
     def __init__(self):
         try:
             uri="bolt://localhost:7687"
-            username = getSecret(['neo4jdb','username'])
-            password = getSecret(['neo4jdb','password'])
-            username = getSecret(['testdb','username'])
-            password = getSecret(['testdb','password'])
+            # username = getSecret(['neo4jdb','username'])
+            # password = getSecret(['neo4jdb','password'])
+            # username = getSecret(['testdb','username'])
+            # password = getSecret(['testdb','password'])
+            username = "neo4j"
+            password = "erex,12345"
             self._driver=GraphDatabase.driver(uri,auth=(username,password))
             self._driver.verify_connectivity()
             print("Neo4j Driver working!") 

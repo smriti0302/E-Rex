@@ -212,7 +212,6 @@ def compareStudents(session,studentId1,studentId2,store):
         session.run(query,studentId1=studentId1,studentId2=studentId2,score=score)
     return score
 
-<<<<<<< HEAD
 def calculate_weighted_similarity(student_interests, club_description):
     student_scores = dict(student_interests)
     club_scores = dict(club_description)
@@ -226,9 +225,6 @@ def calculate_weighted_similarity(student_interests, club_description):
     return similarity
 
 def studentEventSim(session,studentId,eventId,store):
-=======
-def studentEventSim(session,studentId,eventId,**kwargs):
->>>>>>> 9562e4e4419e35220000a8419601488eda5f8a2d
     query="""
     MATCH (s:Student {StudentId:$studentId}),(e:Event {EventId:$eventId})
     RETURN s,e
